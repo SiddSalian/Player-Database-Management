@@ -19,46 +19,69 @@ struct player_data{
 struct tournament_data{
 	char tournName[50];
 	char level[50];
-	char date[7]; /* YYYY/MM */
+	char date[8]; /* YYYY/MM */
 	char host[50];
 	int noOfPlayers;
 	char squad[20][50];
 };
 
-void add_tournament(struct tournament_data tourn, FILE *fp){
+int player_count(struct player_data player, FILE* fp){
+	int player_count = 0;
+	while(fread(&player, sizeof(player), 1, fp)){
+		player_count++;
+	}
+	return player_count;
+}
+
+void add_tournament(struct tournament_data tourn, struct player_data player, FILE *afp, FILE *fp){
 	printf("Tournament Name -> ");
-	scanf("%s", tourn.tournName);
+	scanf(" %50[^\n]", tourn.tournName);
 	fflush(stdin);
 	printf("Level -> ");
-	scanf("%s", tourn.level);
+	scanf(" %50[^\n]", tourn.level);
 	fflush(stdin);
 	printf("Dates (YYYY/MM) -> ");
-	scanf("%s", tourn.date);
+	scanf(" %50[^\n]", tourn.date);
 	fflush(stdin);
 	printf("Hosted by -> ");
-	scanf("%s", tourn.host);
+	scanf(" %50[^\n]", tourn.host);
 	fflush(stdin);
 	printf("Enter the number of players in the squad: ");
 	scanf("%d", &tourn.noOfPlayers);
 	fflush(stdin);
 	printf("Squad list -> \n");
 	for (int i=0; i<tourn.noOfPlayers; i++) {
-		scanf("%s", tourn.squad[i]);
+		printf("%d. ", i+1);
+		scanf(" %50[^\n]", tourn.squad[i]);
+		fflush(stdin);
+		int temp_count = 0;
+		while(fread(&player, sizeof(player), 1, fp)){
+			if(strcmp(tourn.squad[i], player.name) != 0){
+				temp_count++;
+			}
+			if(temp_count == player_count(player ,fp)){
+				printf("Doesn't match any record in database. Please insert correct name!\n");
+				i--;
+			}
+		}
+		rewind(fp);
 	}
 	fflush(stdin);
-	fwrite(&tourn, sizeof(tourn), 1, fp);
+	fwrite(&tourn, sizeof(tourn), 1, afp);
+	fclose(afp);
 	fclose(fp);
 }
 
-void see_tournament_records(struct tournament_data tourn, FILE* fp){
-	while(fread(&tourn, sizeof(tourn), 1, fp)){
-		printf("\nName: %s\nLevel: %s\nDates: %s\nHosted by: %s\n", tourn.tournName, tourn.level, tourn.date, tourn.host);
+void see_tournament_records(struct tournament_data tourn, FILE* afp){
+	while(fread(&tourn, sizeof(tourn), 1, afp)){
+		printf("\nName: %s\nLevel: %s\nDates: %s\nHosted by: %s\n", 
+			tourn.tournName, tourn.level, tourn.date, tourn.host);
 		printf("Squad List:\n");
 		for(int i=0; i<tourn.noOfPlayers; i++){
-			printf("%s\n", tourn.squad[i]);
+			printf("%d. %s\n", i+1, tourn.squad[i]);
 		}
 	}
-	fclose(fp);
+	fclose(afp);
 }
 
 void add_player(struct player_data player, FILE *fp){
@@ -121,6 +144,8 @@ void see_player_records(struct player_data player, FILE* fp){
 	printf ("\nname = %s\ncurrent status = %s\njersey_no = %d\njersey name = %s\nbatch = %s\nage = %d\ngender = %s\ntournaments played = %d\n", player.name, player.current_status, 
 		        player.jersey_no, player.jersey_name, player.batch, player.age, player.gender, player.tournaments_played);}
 		fclose (fp);
+		/*player_count(player, fp);
+		printf("\nplayer count: %d\n", player_count(player, fp));*/
 }
 
 void edit_record(struct player_data player,FILE* fp){
@@ -299,7 +324,8 @@ int main(){
 
 			case 7:
 				afp = fopen("tournament_database.txt", "ab");
-				add_tournament(tourn, afp);
+				fp = fopen("player_database.txt", "rb");
+				add_tournament(tourn, player, afp, fp);
 				break;
 			case 8:
 				afp = fopen("tournament_database.txt", "rb");
