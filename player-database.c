@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+//Structure for Player's Database
 struct player_data{
 	char name[50];
 	char current_status[10];
@@ -12,6 +13,53 @@ struct player_data{
 	char gender[6];
 	int tournaments_played;
 };
+
+//Structure for tournaments database
+#define SQUADMAX 20 // Maximum Squad size
+struct tournament_data{
+	char tournName[50];
+	char level[50];
+	char date[7]; /* YYYY/MM */
+	char host[50];
+	int noOfPlayers;
+	char squad[20][50];
+};
+
+void add_tournament(struct tournament_data tourn, FILE *fp){
+	printf("Tournament Name -> ");
+	scanf("%s", tourn.tournName);
+	fflush(stdin);
+	printf("Level -> ");
+	scanf("%s", tourn.level);
+	fflush(stdin);
+	printf("Dates (YYYY/MM) -> ");
+	scanf("%s", tourn.date);
+	fflush(stdin);
+	printf("Hosted by -> ");
+	scanf("%s", tourn.host);
+	fflush(stdin);
+	printf("Enter the number of players in the squad: ");
+	scanf("%d", &tourn.noOfPlayers);
+	fflush(stdin);
+	printf("Squad list -> \n");
+	for (int i=0; i<tourn.noOfPlayers; i++) {
+		scanf("%s", tourn.squad[i]);
+	}
+	fflush(stdin);
+	fwrite(&tourn, sizeof(tourn), 1, fp);
+	fclose(fp);
+}
+
+void see_tournament_records(struct tournament_data tourn, FILE* fp){
+	while(fread(&tourn, sizeof(tourn), 1, fp)){
+		printf("\nName: %s\nLevel: %s\nDates: %s\nHosted by: %s\n", tourn.tournName, tourn.level, tourn.date, tourn.host);
+		printf("Squad List:\n");
+		for(int i=0; i<tourn.noOfPlayers; i++){
+			printf("%s\n", tourn.squad[i]);
+		}
+	}
+	fclose(fp);
+}
 
 void add_player(struct player_data player, FILE *fp){
 	printf("Name -> ");
@@ -68,7 +116,7 @@ void search_jersey_no(struct player_data player, FILE* fp){
 	}
 }
 
-void see_all_records(struct player_data player, FILE* fp){
+void see_player_records(struct player_data player, FILE* fp){
 	while(fread(&player, sizeof(player), 1, fp)){
 	printf ("\nname = %s\ncurrent status = %s\njersey_no = %d\njersey name = %s\nbatch = %s\nage = %d\ngender = %s\ntournaments played = %d\n", player.name, player.current_status, 
 		        player.jersey_no, player.jersey_name, player.batch, player.age, player.gender, player.tournaments_played);}
@@ -198,19 +246,23 @@ void search_by_category(struct player_data player, FILE* fp){
 
 
 int main(){
-	struct player_data player;
+	struct player_data player; 
+	struct tournament_data tourn;
 	FILE* fp;
+	FILE* afp;
 
 	int opt = 0;
-		while(opt != 7){
+		while(opt != 9){
 		printf("\nMENU\n");
-		printf("1. Add a player.\n");
-		printf("2. Search player by name.\n");
-		printf("3. Search player by jersey number.\n");
-		printf("4. See all records.\n");
+		printf("1. Add a player\n");
+		printf("2. Search player by name\n");
+		printf("3. Search player by jersey number\n");
+		printf("4. See all player records\n");
 		printf("5. Edit a record\n");
 		printf("6. Search by category\n");
-		printf("7. Exit.\n");
+		printf("7. Add a tournament\n");
+		printf("8. See all tournament records\n");
+		printf("9. Exit\n");
 		printf("Choose an option: ");
 		scanf("%d", &opt);
 
@@ -232,7 +284,7 @@ int main(){
 
 			case 4:
 				fp = fopen("player_database.txt", "rb");
-				see_all_records(player, fp);
+				see_player_records(player, fp);
 				break;
 
 			case 5:
@@ -246,9 +298,16 @@ int main(){
 				break;
 
 			case 7:
+				afp = fopen("tournament_database.txt", "ab");
+				add_tournament(tourn, afp);
+				break;
+			case 8:
+				afp = fopen("tournament_database.txt", "rb");
+				see_tournament_records(tourn, afp);
+				break;
+			case 9:
 				exit(1);
 		}
 	}
-
 	return 0;
 }
