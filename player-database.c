@@ -44,6 +44,7 @@ void add_tournament(struct tournament_data tourn, struct player_data player, FIL
 	fflush(stdin);
 	printf("Dates (YYYY/MM) -> ");
 	scanf(" %8[^\n]", tourn.date);
+	scanf(" %50[^\n]", tourn.date);
 	fflush(stdin);
 	printf("Hosted by -> ");
 	scanf(" %50[^\n]", tourn.host);
@@ -53,6 +54,7 @@ void add_tournament(struct tournament_data tourn, struct player_data player, FIL
 	fflush(stdin);
 	printf("Squad list -> \n");
 	for(int i=0; i<tourn.noOfPlayers; i++) {
+	for (int i=0; i<tourn.noOfPlayers; i++) {
 		printf("%d. ", i+1);
 		scanf(" %50[^\n]", tourn.squad[i]);
 		fflush(stdin);
@@ -74,6 +76,10 @@ void add_tournament(struct tournament_data tourn, struct player_data player, FIL
 				fseek(fp, -sizeof(player), SEEK_CUR);
 				fwrite(&player, sizeof(player), 1, fp);
 				break;
+			}
+			if(temp_count == player_count(player ,fp)){
+				printf("Doesn't match any record in database. Please insert correct name!\n");
+				i--;
 			}
 		}
 		rewind(fp);
@@ -148,9 +154,10 @@ void edit_tournament(struct tournament_data tourn, struct player_data player, FI
 			fseek(fp, -sizeof(tourn), SEEK_CUR);
 			fwrite(&tourn, sizeof(tourn), 1, fp);
 			fclose(fp);
+			fclose(afp);
 		}
 	}
-}
+		}
 
 // To add aa player to the database
 void add_player(struct player_data player, FILE *fp){
