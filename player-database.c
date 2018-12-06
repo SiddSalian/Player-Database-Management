@@ -154,10 +154,9 @@ void edit_tournament(struct tournament_data tourn, struct player_data player, FI
 			fseek(fp, -sizeof(tourn), SEEK_CUR);
 			fwrite(&tourn, sizeof(tourn), 1, fp);
 			fclose(fp);
-			fclose(afp);
 		}
 	}
-		}
+}
 
 // To add aa player to the database
 void add_player(struct player_data player, FILE *fp){
