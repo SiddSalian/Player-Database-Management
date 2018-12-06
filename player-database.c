@@ -19,69 +19,161 @@ struct player_data{
 struct tournament_data{
 	char tournName[50];
 	char level[50];
-	char date[7]; /* YYYY/MM */
+	char date[8]; /* YYYY/MM */
 	char host[50];
 	int noOfPlayers;
 	char squad[20][50];
 };
 
-void add_tournament(struct tournament_data tourn, FILE *fp){
+// Counts the number of players in the database. Used in a few functions 
+int player_count(struct player_data player, FILE* fp){
+	int player_count = 0;
+	while(fread(&player, sizeof(player), 1, fp)){
+		player_count++;
+	}
+	return player_count;
+}
+
+// Function to add a tournament
+void add_tournament(struct tournament_data tourn, struct player_data player, FILE *afp, FILE *fp){
 	printf("Tournament Name -> ");
-	scanf("%s", tourn.tournName);
+	scanf(" %50[^\n]", tourn.tournName);
 	fflush(stdin);
 	printf("Level -> ");
-	scanf("%s", tourn.level);
+	scanf(" %50[^\n]", tourn.level);
 	fflush(stdin);
 	printf("Dates (YYYY/MM) -> ");
-	scanf("%s", tourn.date);
+	scanf(" %8[^\n]", tourn.date);
 	fflush(stdin);
 	printf("Hosted by -> ");
-	scanf("%s", tourn.host);
+	scanf(" %50[^\n]", tourn.host);
 	fflush(stdin);
 	printf("Enter the number of players in the squad: ");
 	scanf("%d", &tourn.noOfPlayers);
 	fflush(stdin);
 	printf("Squad list -> \n");
-	for (int i=0; i<tourn.noOfPlayers; i++) {
-		scanf("%s", tourn.squad[i]);
+	for(int i=0; i<tourn.noOfPlayers; i++) {
+		printf("%d. ", i+1);
+		scanf(" %50[^\n]", tourn.squad[i]);
+		fflush(stdin);
+		int temp_count = 0;
+		rewind(fp);
+		while(fread(&player, sizeof(player), 1, fp)){
+			if(strcmp(tourn.squad[i], player.name) != 0){
+				temp_count++;
+			}
+			if(temp_count == player_count(player ,fp)){ /* Compares the user input with the player names in the player database.
+														   It there's no match then asks user to input a name again. */
+				printf("Doesn't match any record in database. Please insert correct name!\n"); 
+				/* Facing issue in this part. Mentioned in the report. */
+				i--;
+			}
+			if(strcmp(tourn.squad[i], player.name)==0){
+				int temp = player.tournaments_played;
+				player.tournaments_played = temp + 1;
+				fseek(fp, -sizeof(player), SEEK_CUR);
+				fwrite(&player, sizeof(player), 1, fp);
+				break;
+			}
+		}
+		rewind(fp);
 	}
 	fflush(stdin);
-	fwrite(&tourn, sizeof(tourn), 1, fp);
+	fwrite(&tourn, sizeof(tourn), 1, afp);
+	fclose(afp);
 	fclose(fp);
 }
 
-void see_tournament_records(struct tournament_data tourn, FILE* fp){
-	while(fread(&tourn, sizeof(tourn), 1, fp)){
-		printf("\nName: %s\nLevel: %s\nDates: %s\nHosted by: %s\n", tourn.tournName, tourn.level, tourn.date, tourn.host);
+// To See all tournament records
+void see_tournament_records(struct tournament_data tourn, FILE* afp){
+	while(fread(&tourn, sizeof(tourn), 1, afp)){
+		printf("\nName: %s\nLevel: %s\nDates: %s\nHosted by: %s\n", 
+			tourn.tournName, tourn.level, tourn.date, tourn.host);
 		printf("Squad List:\n");
 		for(int i=0; i<tourn.noOfPlayers; i++){
-			printf("%s\n", tourn.squad[i]);
+			printf("%d. %s\n", i+1, tourn.squad[i]);
 		}
 	}
-	fclose(fp);
+	fclose(afp);
 }
 
+// To Edit a tournament entry
+void edit_tournament(struct tournament_data tourn, struct player_data player, FILE *afp, FILE *fp){
+	printf("Password: ");
+	char password[8];
+	scanf("%s", password);
+	if(strcmp(password, "goodwork")!= 0){
+		printf("Incorrect Password!\n");
+		return;
+	}
+	char Tourn[20];
+	printf("Enter name of the tournament you want to edit: ");
+	scanf("%s", Tourn);
+	fflush(stdin);
+	while(fread(&tourn, sizeof(tourn), 1, fp)){
+		if(strcmp(Tourn, tourn.tournName) == 0){
+			printf("Tournament Name -> ");
+			scanf(" %50[^\n]", tourn.tournName);
+			fflush(stdin);
+			printf("Level -> ");
+			scanf(" %50[^\n]", tourn.level);
+			fflush(stdin);
+			printf("Dates (YYYY/MM) -> ");
+			scanf(" %8[^\n]", tourn.date);
+			fflush(stdin);
+			printf("Hosted by -> ");
+			scanf(" %50[^\n]", tourn.host);
+			fflush(stdin);
+			printf("Enter the number of players in the squad: ");
+			scanf("%d", &tourn.noOfPlayers);
+			fflush(stdin);
+			printf("Squad list -> \n");
+			for(int i=0; i<tourn.noOfPlayers; i++) {
+				printf("%d. ", i+1);
+				scanf(" %50[^\n]", tourn.squad[i]);
+				fflush(stdin);
+				int temp_count = 0;
+				while(fread(&player, sizeof(player), 1, fp)){
+					if(strcmp(tourn.squad[i], player.name) != 0){
+						temp_count++;
+					}
+					if(temp_count == player_count(player ,fp)){
+						printf("Doesn't match any record in database. Please insert correct name!\n");
+						i--;
+					}
+				}
+				rewind(fp);
+			}
+			fflush(stdin);
+			fseek(fp, -sizeof(tourn), SEEK_CUR);
+			fwrite(&tourn, sizeof(tourn), 1, fp);
+			fclose(fp);
+		}
+	}
+}
+
+// To add aa player to the database
 void add_player(struct player_data player, FILE *fp){
 	printf("Name -> ");
-	scanf("%s", player.name);
+	scanf(" %50[^\n]", player.name);
 	fflush(stdin);
 	printf("Current Status -> ");
-	scanf("%s", player.current_status);
+	scanf(" %10[^\n]", player.current_status);
 	fflush(stdin);
 	printf("Jersey Number -> ");
 	scanf("%d", &player.jersey_no);
 	fflush(stdin);
 	printf("Jersey Name -> ");
-	scanf("%s", player.jersey_name);
+	scanf(" %15[^\n]", player.jersey_name);
 	fflush(stdin);
 	printf("Batch -> ");
-	scanf("%s", player.batch);
+	scanf(" %10[^\n]", player.batch);
 	fflush(stdin);
 	printf("Age -> ");
 	scanf("%d", &player.age);
 	fflush(stdin);
 	printf("Gender -> ");
-	scanf("%s", player.gender);
+	scanf(" %6[^\n]", player.gender);
 	fflush(stdin);
 	printf("Number of tournaments played -> ");
 	scanf("%d", &player.tournaments_played);
@@ -90,6 +182,7 @@ void add_player(struct player_data player, FILE *fp){
 	fclose(fp);
 }
 
+// To search a player by name
 void search_name(struct player_data player, FILE* fp){
 	printf("Enter the name: ");
 	char name[20];
@@ -103,6 +196,7 @@ void search_name(struct player_data player, FILE* fp){
 	}
 }
 
+// To search a player by jersey number
 void search_jersey_no(struct player_data player, FILE* fp){
 	printf("Enter the jersey number: ");
 	int number;
@@ -116,14 +210,25 @@ void search_jersey_no(struct player_data player, FILE* fp){
 	}
 }
 
+// To See all player records
 void see_player_records(struct player_data player, FILE* fp){
 	while(fread(&player, sizeof(player), 1, fp)){
 	printf ("\nname = %s\ncurrent status = %s\njersey_no = %d\njersey name = %s\nbatch = %s\nage = %d\ngender = %s\ntournaments played = %d\n", player.name, player.current_status, 
 		        player.jersey_no, player.jersey_name, player.batch, player.age, player.gender, player.tournaments_played);}
 		fclose (fp);
+		/*player_count(player, fp);
+		printf("\nplayer count: %d\n", player_count(player, fp));*/
 }
 
-void edit_record(struct player_data player,FILE* fp){
+// To Edit a player record
+void edit_player(struct player_data player,FILE* fp){
+	printf("Password: ");
+	char password[8];
+	scanf("%s", password);
+	if(strcmp(password, "goodwork")!= 0){
+		printf("Incorrect Password!\n");
+		return;
+	}
 	char name[20];
 	printf("Enter name to edit: ");
 	scanf("%s", name);
@@ -131,30 +236,29 @@ void edit_record(struct player_data player,FILE* fp){
 	while(fread(&player, sizeof(player), 1, fp)){
 		if(strcmp(name, player.name) == 0){
 			printf("Name -> ");
-			scanf("%s", player.name);
+			scanf(" %50[^\n]", player.name);
 			fflush(stdin);
 			printf("Current Status -> ");
-			scanf("%s", player.current_status);
+			scanf(" %10[^\n]", player.current_status);
 			fflush(stdin);
 			printf("Jersey Number -> ");
 			scanf("%d", &player.jersey_no);
 			fflush(stdin);
 			printf("Jersey Name -> ");
-			scanf("%s", player.jersey_name);
+			scanf(" %15[^\n]", player.jersey_name);
 			fflush(stdin);
 			printf("Batch -> ");
-			scanf("%s", player.batch);
+			scanf(" %10[^\n]", player.batch);
 			fflush(stdin);
 			printf("Age -> ");
 			scanf("%d", &player.age);
 			fflush(stdin);
 			printf("Gender -> ");
-			scanf("%s", player.gender);
+			scanf(" %6[^\n]", player.gender);
 			fflush(stdin);
 			printf("Number of tournaments played -> ");
 			scanf("%d", &player.tournaments_played);
 			fflush(stdin);
-
 			fseek(fp, -sizeof(player), SEEK_CUR);
 			fwrite(&player, sizeof(player), 1, fp);
 			fclose(fp);
@@ -162,6 +266,7 @@ void edit_record(struct player_data player,FILE* fp){
 	}
 }
 
+// To list players in the user-asked category
 void search_by_category(struct player_data player, FILE* fp){
 	int category;
 	printf("Categories: 1- Current Status, 2- Batch, 3- Gender\n--> ");
@@ -245,6 +350,7 @@ void search_by_category(struct player_data player, FILE* fp){
 }
 
 
+// Main Function
 int main(){
 	struct player_data player; 
 	struct tournament_data tourn;
@@ -252,17 +358,18 @@ int main(){
 	FILE* afp;
 
 	int opt = 0;
-		while(opt != 9){
+		while(opt != 10){
 		printf("\nMENU\n");
 		printf("1. Add a player\n");
 		printf("2. Search player by name\n");
 		printf("3. Search player by jersey number\n");
 		printf("4. See all player records\n");
-		printf("5. Edit a record\n");
+		printf("5. Edit a player record\n");
 		printf("6. Search by category\n");
 		printf("7. Add a tournament\n");
 		printf("8. See all tournament records\n");
-		printf("9. Exit\n");
+		printf("9. Edit a tournament record\n");
+		printf("10. Exit\n");
 		printf("Choose an option: ");
 		scanf("%d", &opt);
 
@@ -289,7 +396,7 @@ int main(){
 
 			case 5:
 				fp = fopen("player_database.txt","rb+");
-				edit_record(player, fp);
+				edit_player(player, fp);
 				break;
 
 			case 6:
@@ -299,13 +406,19 @@ int main(){
 
 			case 7:
 				afp = fopen("tournament_database.txt", "ab");
-				add_tournament(tourn, afp);
+				fp = fopen("player_database.txt", "rb");
+				add_tournament(tourn, player, afp, fp);
 				break;
 			case 8:
 				afp = fopen("tournament_database.txt", "rb");
 				see_tournament_records(tourn, afp);
 				break;
-			case 9:
+			case 9: 
+				afp = fopen("tournament_database.txt", "rb+");
+				fp = fopen("player_database.txt", "rb");
+				edit_tournament(tourn, player, afp, fp);
+				break;
+			case 10:
 				exit(1);
 		}
 	}
